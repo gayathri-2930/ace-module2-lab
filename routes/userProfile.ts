@@ -58,9 +58,9 @@ export function getUserProfile () {
         if (!code) {
           throw new Error('Username is null')
         }
-        const singleQuoteRegex = /^'(?:[^'\\]|\\.)*'$/
-        const doubleQuoteRegex = /^"(?:[^"\\]|\\.)*"$/
-        const backtickRegex = /^`(?:[^`\\$]|\\.|\$(?!{))*`$/
+        const singleQuoteRegex = /^'(?:[^'\\\r\n]|\\(?:[bfnrtv0]|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}))*'$/
+        const doubleQuoteRegex = /^"(?:[^"\\\r\n]|\\(?:[bfnrtv0]|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}))*"$/
+        const backtickRegex = /^`(?:[^`\\$\r\n]|\\(?:[bfnrtv0]|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4})|\$(?!{))*`$/
         const numericRegex = /^-?\d+(?:\.\d+)?$/
         const booleanRegex = /^(?:true|false|null|undefined)$/
 
@@ -73,7 +73,15 @@ export function getUserProfile () {
         if (!isSafe) {
           throw new Error('Unsafe code execution blocked')
         }
-        username = eval(code) // eslint-disable-line no-eval
+        if (code === 'undefined') {
+          username = undefined
+        } else if (code.startsWith("'") && code.endsWith("'")) {
+          username = JSON.parse('"' + code.slice(1, -1).replace(/\\"/g, '"').replace(/"/g, '\\"') + '"')
+        } else if (code.startsWith('`') && code.endsWith('`')) {
+          username = JSON.parse('"' + code.slice(1, -1).replace(/\\"/g, '"').replace(/"/g, '\\"') + '"')
+        } else {
+          username = JSON.parse(code)
+        }
       } catch (err) {
         username = '\\' + username
       }
